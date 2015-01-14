@@ -42,6 +42,7 @@ synced = false
 resources = []
 resources << %{{type='kavlan'}/vlan=1}
 resources << %{nodes=3}
+resources << %{walltime=#{XP5K::Config[:walltime]}}
 
 roles = []
 roles << XP5K::Role.new({ :name => 'puppet', :size => 1 })

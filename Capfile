@@ -26,7 +26,7 @@ XP5K::Config[:computes]   ||= 1
 
 # Constants
 #
-PUPPET_VERSION = '3.7.3'
+PUPPET_VERSION = '3.4.2'
 SSH_CONFIGFILE_OPT = XP5K::Config[:ssh_config].nil? ? "" : " -F " + XP5K::Config[:ssh_config]
 SSH_CMD = "ssh -o ConnectTimeout=10" + SSH_CONFIGFILE_OPT
 

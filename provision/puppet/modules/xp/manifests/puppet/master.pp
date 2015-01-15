@@ -10,7 +10,7 @@ class xp::puppet::master {
   }
 
   $agents       = hiera_array('puppet_agents')
-  $version      = '3.7.3-1puppetlabs1'
+  $version      = '3.4.2-1puppetlabs1'
   $puppetmaster = hiera('puppetmaster')
 
   package {

@@ -124,6 +124,7 @@ before :start, "kadeploy:submit"
 before :start, "provision:setup_server"
 before :start, "provision:hiera_generate"
 before :start, "provision:puppetmaster"
+before :start, "provision:enable_agents"
 
 
 # Empty task for the `start` workflow
@@ -200,6 +201,19 @@ namespace :provision do
     upload "provision/hiera/hiera.yaml", "/etc/puppet/hiera.yaml"
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet apply --modulepath=/srv/provision/puppet/modules -e 'include xp::puppet::master'"
   end
+
+  desc 'Enable puppet agents (needed on puppet 3.6.x version provided by ubuntu)'
+  task :enable_agents, :roles => :puppet_agents do
+    set :user, "root"
+    run "puppet agent --enable"
+  end
+
+  desc 'Provision puppet agents by roles (needs ROLES=)'
+  task :roles, :roles => :empty, :on_error => :continue do
+    set :user, 'root'
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{getHiera('puppetmaster')}"
+  end
+
 
   desc "Upload modules on Puppet master"
   task :upload_modules do

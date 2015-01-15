@@ -45,7 +45,7 @@ resources << %{nodes=3}
 resources << %{walltime=#{XP5K::Config[:walltime]}}
 
 roles = []
-roles << XP5K::Role.new({ :name => 'puppet', :size => 1 })
+roles << XP5K::Role.new({ :name => 'puppetmaster', :size => 1 })
 roles << XP5K::Role.new({ :name => 'controller', :size => 1 })
 roles << XP5K::Role.new({ :name => 'computes', :size => 1 })
 
@@ -68,7 +68,7 @@ xp.define_job(job_description)
 xp.define_deployment({
   :site          => XP5K::Config['site'],
   :environment   => "wheezy-x64-base",
-  :roles         => %w{ puppet },
+  :roles         => %w{ puppetmaster },
   :key           => File.read(XP5K::Config[:public_key]),
   :vlan_from_job => 'xp5k_openstack',
   :notifications => ["xmpp:#{XP5K::Config[:user]}@jabber.grid5000.fr"]
@@ -92,8 +92,8 @@ set :ssh_config, XP5K::Config[:ssh_config] if XP5K::Config[:ssh_config]
 
 # Define roles
 #
-role :puppet do
-  kavlanHostsList(xp.role_with_name("puppet").servers, vlansForJobName('xp5k_openstack').first)
+role :puppetmaster do
+  kavlanHostsList(xp.role_with_name("puppetmaster").servers, vlansForJobName('xp5k_openstack').first)
 end
 
 role :controller do
@@ -154,8 +154,8 @@ end
 # Tasks for Puppet provisioning
 #
 namespace :provision do
-  desc "Install puppet agent"
-  task :setup_agent, :roles => :puppet do
+  desc "Install Puppet master"
+  task :setup_server, :roles => :puppetmaster do
     set :user, "root"
     run 'apt-get update && apt-get -y install curl wget'
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 wget -O /tmp/puppet_install.sh https://raw.githubusercontent.com/pmorillon/puppet-puppet/master/extras/bootstrap/puppet_install.sh"

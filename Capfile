@@ -104,6 +104,14 @@ role :computes do
   kavlanHostsList(xp.role_with_name("computes").servers, vlansForJobName('xp5k_openstack').first)
 end
 
+role :puppet_agents do
+  servers = []
+  %w{ controller computes }.each do |role|
+    servers << kavlanHostsList(xp.role_with_name(role).servers, vlansForJobName('xp5k_openstack').first)
+  end
+  servers.flatten!
+end
+
 role :empty do
   []
 end
@@ -160,38 +168,31 @@ namespace :provision do
     run 'apt-get update && apt-get -y install curl wget'
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 wget -O /tmp/puppet_install.sh https://raw.githubusercontent.com/pmorillon/puppet-puppet/master/extras/bootstrap/puppet_install.sh"
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 PUPPET_VERSION=#{PUPPET_VERSION} sh /tmp/puppet_install.sh"
-  end
-
-  desc "Install Puppet master"
-  task :setup_server, :roles => :puppet do
-    set :user, "root"
     run "apt-get -y install puppetmaster=#{PUPPET_VERSION}-1puppetlabs1 puppetmaster-common=#{PUPPET_VERSION}-1puppetlabs1"
   end
 
-  #before 'provision:frontend', 'provision:upload_modules'
+  desc "Generate hiera databases"
+  task :hiera_generate do
+    generateHieraDatabase
+  end
 
-  #desc "Provision frontend"
-  #task :frontend, :roles => :puppet do
-    #set :user, "root"
-    #upload "provision/hiera/hiera.yaml", "/etc/puppet/hiera.yaml"
-    #run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet apply --modulepath=/srv/provision/puppet/modules -e 'include xp::frontend'"
-  #end
+  before 'provision:puppetmaster', 'provision:upload_modules'
 
-  #before 'provision:all', 'provision:upload_modules'
+  desc "Provision puppetmaster"
+  task :puppetmaster, :roles => :puppetmaster do
+    set :user, "root"
+    upload "provision/hiera/hiera.yaml", "/etc/puppet/hiera.yaml"
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet apply --modulepath=/srv/provision/puppet/modules -e 'include xp::puppet::master'"
+  end
 
-  #desc 'Provision all puppet agents'
-  #task :all, :roles => [:controller, :computes], :on_error => :continue do
-    #set :user, 'root'
-    #run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{xp.role_with_name("puppet").servers.first}"
-  #end
-
-  #desc "Upload modules on Puppet master"
-  #task :upload_modules do
-    #unless synced
-      #%x{rsync -e '#{SSH_CMD}' -rl --delete --exclude '.git*' #{sync_path} root@#{xp.role_with_name("puppet").servers.first}:/srv}
-      #synced = true
-    #end
-  #end
+  desc "Upload modules on Puppet master"
+  task :upload_modules do
+    unless synced
+      puts %{rsync -e '#{SSH_CMD}' -rl --delete --exclude '.git*' #{sync_path} root@#{getHiera('puppetmaster')}:/srv}
+      %x{rsync -e '#{SSH_CMD}' -rl --delete --exclude '.git*' #{sync_path} root@#{getHiera('puppetmaster')}:/srv}
+      synced = true
+    end
+  end
 
 end
 
@@ -207,4 +208,39 @@ end
 #
 def kavlanHostsList(list, vlanid)
   list.map { |node| node.gsub(/-(\d+)/, '-\1-kavlan-' + vlanid.to_s) }
+end
+
+
+# List servers from capistrano roles
+#
+def serversForCapRoles(roles)
+  find_servers(:roles => roles).collect { |x| x.host }
+end
+
+
+# Manage the Hiera database
+#
+def generateHieraDatabase
+  # Remove old databases from previous experiments
+  %x{rm -f provision/hiera/db/*}
+
+  # Add experiment configuration into Hiera
+  xpconfig = {
+    'puppetmaster'               => serversForCapRoles("puppetmaster").first,
+    'puppet_agents'              => serversForCapRoles("puppet_agents"),
+    'vlan'                       => vlansForJobName("xp5k_openstack").first,
+  }
+  FileUtils.mkdir('provision/hiera/db') if not Dir.exists?('provision/hiera/db')
+  File.open('provision/hiera/db/xp.yaml', 'w') do |file|
+    file.puts xpconfig.to_yaml
+  end
+
+end
+
+
+# Get Hiera XP value
+#
+def getHiera(key)
+   hiera = YAML.load(File.read('provision/hiera/db/xp.yaml'))
+   hiera[key]
 end

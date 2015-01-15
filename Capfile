@@ -117,6 +117,22 @@ role :empty do
 end
 
 
+# Define the workflow
+#
+before :start, "oar:submit"
+before :start, "kadeploy:submit"
+before :start, "provision:setup_server"
+before :start, "provision:hiera_generate"
+before :start, "provision:puppetmaster"
+
+
+# Empty task for the `start` workflow
+#
+desc "Start the experiment"
+task :start do
+end
+
+
 # Task for commands
 #
 desc "run command on computes nodes (need CMD and ROLES, computes by default)"

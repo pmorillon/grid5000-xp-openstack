@@ -265,6 +265,11 @@ def generateHieraDatabase
     file.puts xpconfig.to_yaml
   end
 
+  # Configure Puppet classes to apply on each nodes
+  File.open("provision/hiera/db/#{serversForCapRoles("controller").first}.yaml", 'w') do |file|
+    file.puts({ 'classes' => %w{ xp::rabbitmq } }.to_yaml)
+  end
+
 end
 
 

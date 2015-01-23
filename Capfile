@@ -208,12 +208,21 @@ namespace :provision do
     run "puppet agent --enable"
   end
 
+  before 'provision:roles', 'provision:upload_modules'
+
   desc 'Provision puppet agents by roles (needs ROLES=)'
   task :roles, :roles => :empty, :on_error => :continue do
     set :user, 'root'
     run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{getHiera('puppetmaster')}"
   end
 
+  before 'provision:agents', 'provision:upload_modules'
+
+  desc 'Provision puppet agents'
+  task :agents, :roles => :puppet_agents, :on_error => :continue do
+    set :user, 'root'
+    run "http_proxy=http://proxy:3128 https_proxy=http://proxy:3128 puppet agent -t --server #{getHiera('puppetmaster')}"
+  end
 
   desc "Upload modules on Puppet master"
   task :upload_modules do

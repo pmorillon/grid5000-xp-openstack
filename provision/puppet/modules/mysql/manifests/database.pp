@@ -1,4 +1,4 @@
-define xp::mysql::database ($ensure) {
+define mysql::database ($ensure) {
 
   case $ensure {
     present: {

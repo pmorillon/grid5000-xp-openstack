@@ -1,14 +1,6 @@
 class xp::mysql {
 
-  package {
-    ['mysql-server', 'python-mysqldb']:
-      ensure => installed;
-  }
-
-  service {
-    'mysql':
-      ensure => running;
-  }
+  include '::mysql'
 
   file {
     '/etc/mysql/my.cnf':
@@ -19,7 +11,6 @@ class xp::mysql {
       source => 'puppet:///modules/xp/mysql/my.cnf';
   }
 
-  Package['mysql-server'] -> Service['mysql']
-  File['/etc/mysql/my.cnf'] ~> Service['mysql']
+  Package['mysql-server'] -> File['/etc/mysql/my.cnf'] ~> Service['mysql']
 
 }

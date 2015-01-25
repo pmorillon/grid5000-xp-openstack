@@ -1,4 +1,4 @@
-define xp::mysql::grant (
+define mysql::grant (
   $privileges,
   $database,
   $user,
@@ -12,6 +12,5 @@ define xp::mysql::grant (
   }
 
   Package['mysql-server'] -> Exec <| |>
-
 
 }
